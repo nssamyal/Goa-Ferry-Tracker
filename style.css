@@ -521,3 +521,91 @@ body {
   .popup { border-radius: 24px; margin: 24px; width: calc(100% - 48px); }
   .popup-overlay { align-items: center; }
 }
+
+/* ════════════════════════════════════════════════════════
+   v2 — Admin + Voting styles
+════════════════════════════════════════════════════════ */
+
+/* Admin badge */
+.admin-badge {
+  background: #1a3a6b;
+  color: #fff;
+  text-align: center;
+  padding: 8px 16px;
+  border-radius: 10px;
+  font-size: 0.82rem;
+  font-weight: 600;
+  margin-bottom: 14px;
+  letter-spacing: 0.04em;
+}
+
+/* Admin section */
+.admin-section {
+  margin-top: 24px;
+  text-align: center;
+}
+.admin-btn {
+  background: none;
+  border: 1.5px solid var(--border);
+  border-radius: 10px;
+  padding: 10px 20px;
+  font-family: var(--font-body);
+  font-size: 0.82rem;
+  color: var(--muted);
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.admin-btn:active { background: var(--blue-light); }
+.admin-btn.admin-active {
+  background: #1a3a6b;
+  color: #fff;
+  border-color: #1a3a6b;
+}
+
+/* Vote box */
+.vote-box {
+  background: var(--amber-light);
+  border: 1.5px solid #fcd34d;
+  border-radius: var(--radius-card);
+  padding: 20px 22px;
+  margin-bottom: 16px;
+  text-align: center;
+}
+.vote-title {
+  font-family: var(--font-head);
+  font-size: 1.1rem;
+  color: var(--amber);
+  margin-bottom: 4px;
+}
+.vote-direction {
+  font-size: 0.9rem;
+  color: var(--text);
+  font-weight: 600;
+  margin-bottom: 14px;
+}
+.vote-bar-wrap {
+  display: flex;
+  justify-content: center;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+.vote-pip {
+  width: 36px;
+  height: 10px;
+  border-radius: 999px;
+  background: #fcd34d;
+  transition: background 0.3s;
+}
+.vote-pip.filled {
+  background: var(--amber);
+}
+.vote-count {
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--amber);
+  margin-bottom: 4px;
+}
+.vote-hint {
+  font-size: 0.75rem;
+  color: var(--muted);
+}
