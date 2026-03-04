@@ -3,18 +3,18 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Goa Ferry Tracker</title>
-  <link rel="stylesheet" href="style.css" />
-  <link rel="preconnect" href="https://fonts.googleapis.com" />
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet" />
+  <meta name="geo.region" content="IN-GA" />
+  <meta name="geo.placename" content="Goa, India" />
+  <title>Goa Ferry Tracker — Live Status for Durbhat, Adpai & Rassaim</title>
   <meta name="description" content="Live ferry tracker for Goa — Durbhat, Adpai and Rassaim routes. Real time crowdsourced ferry status updates." />
   <meta name="keywords" content="Goa ferry tracker, Durbhat ferry, Rassaim ferry, Adpai ferry, Goa commute" />
   <meta property="og:title" content="Goa Ferry Tracker" />
   <meta property="og:description" content="Live ferry status for Durbhat, Adpai and Rassaim routes in Goa." />
   <meta property="og:url" content="https://nssamyal.github.io/Goa-Ferry-Tracker/" />
-  <meta name="geo.region" content="IN-GA" />
-  <meta name="geo.placename" content="Goa, India" />
+  <link rel="stylesheet" href="style.css" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet" />
 </head>
 <body>
 
@@ -77,17 +77,25 @@
       <!-- Admin badge -->
       <div id="admin-badge" class="admin-badge" style="display:none">🔓 Admin Mode Active</div>
 
-      <!-- Vote status box (shown when votes pending) -->
+      <!-- Stale data warning -->
+      <div id="stale-msg" class="stale-msg" style="display:none"></div>
+
+      <!-- Vote status box -->
       <div id="vote-status-box" style="display:none"></div>
 
       <!-- Status block -->
       <div class="status-card" id="status-card">
+
         <div id="status-uncertain" class="uncertain-msg">
           <span class="uncertain-icon">🌊</span>
           <p>Status uncertain – waiting for commuter update.</p>
         </div>
 
         <div id="status-live" style="display:none">
+
+          <!-- Boarding message -->
+          <div id="boarding-msg" class="boarding-msg" style="display:none"></div>
+
           <div class="direction-row">
             <span class="dir-port" id="dir-from"></span>
             <span class="dir-arrow">→</span>
@@ -134,7 +142,7 @@
         <p class="reporter-hint" id="reporter-hint">3 commuter reports needed to confirm · updates shared in real time</p>
       </div>
 
-      <!-- Admin login button -->
+      <!-- Admin login -->
       <div class="admin-section">
         <button class="admin-btn" id="admin-btn" onclick="toggleAdmin()">🔐 Admin login</button>
       </div>
@@ -154,13 +162,13 @@
     </div>
   </div>
 
-  <!-- Load script.js FIRST -->
+  <!-- script.js loads first -->
   <script src="script.js"></script>
 
   <!-- Firebase SDK -->
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
-    import { getDatabase, ref, set, onValue, get, serverTimestamp }
+    import { getDatabase, ref, set, onValue, serverTimestamp }
       from "https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
 
     const firebaseConfig = {
@@ -180,7 +188,6 @@
     window._ref      = ref;
     window._set      = set;
     window._onValue  = onValue;
-    window._get      = get;
     window._serverTs = serverTimestamp;
 
     console.log('🔥 Firebase module loaded');
