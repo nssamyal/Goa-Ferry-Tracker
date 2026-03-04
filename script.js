@@ -1,6 +1,5 @@
 /* ═══════════════════════════════════════════════════════
    GOA FERRY TRACKER — script.js
-   v2 — Admin + 3-commuter voting system
 ═══════════════════════════════════════════════════════ */
 
 "use strict";
@@ -10,7 +9,7 @@ const ROUTES = {
   route2: { id:'route2', label:'Adpai ↔ Rassaim',   portA:'Adpai',   portB:'Rassaim', durA2B:10*60*1000, durB2A:10*60*1000 },
 };
 
-const ADMIN_PASSWORD    = 'ferry@goa2024';  // Change this to your own password
+const ADMIN_PASSWORD    = 'ferry@goa2026';  // Please do not misuse it
 const VOTES_NEEDED      = 3;                // Commuter votes needed to confirm
 const ANTI_SPAM_DEVICE  = 5 * 60 * 1000;   // 5 min per device per route
 const STALE_THRESHOLD   = 20 * 60 * 1000;
@@ -49,9 +48,7 @@ function listenRoute(routeId) {
   });
 }
 
-// ════════════════════════════════════════════════════════
 // PAGE NAVIGATION
-// ════════════════════════════════════════════════════════
 
 function openRoute(routeId) {
   currentRoute = routeId;
@@ -78,9 +75,9 @@ function showPage(id) {
   window.scrollTo(0, 0);
 }
 
-// ════════════════════════════════════════════════════════
+
 // ADMIN
-// ════════════════════════════════════════════════════════
+
 
 function toggleAdmin() {
   if (isAdmin) {
@@ -120,9 +117,8 @@ function updateAdminUI() {
   }
 }
 
-// ════════════════════════════════════════════════════════
+
 // HOME CARD SUMMARIES
-// ════════════════════════════════════════════════════════
 
 function updateHomeCard(routeId, data) {
   const footer = document.getElementById(`footer-${routeId}`);
@@ -161,9 +157,7 @@ function updateHomeCard(routeId, data) {
   }
 }
 
-// ════════════════════════════════════════════════════════
 // ROUTE STATUS RENDERING
-// ════════════════════════════════════════════════════════
 
 function renderRouteStatus(routeId, data) {
   const route = ROUTES[routeId];
@@ -273,9 +267,7 @@ function startTimer() {
   }, 1000);
 }
 
-// ════════════════════════════════════════════════════════
 // DEPARTURE REPORTING
-// ════════════════════════════════════════════════════════
 
 function reportDeparture(port) {
   // Check device anti-spam (skip for admin)
@@ -411,9 +403,7 @@ function saveDeviceVote(routeId, port) {
   localStorage.setItem(key, String(Date.now()));
 }
 
-// ════════════════════════════════════════════════════════
 // UTILITIES
-// ════════════════════════════════════════════════════════
 
 function formatTime(ts) {
   if (!ts) return '—';
