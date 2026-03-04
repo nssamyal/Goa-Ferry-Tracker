@@ -23,7 +23,7 @@ let timerInterval = null;
 let isAdmin       = false;
 let db, fbRef, fbSet, fbOnValue;
 
-// ── Firebase init ─────────────────────────────────────
+// ── Firebase init 
 function tryInit() {
   if (window._db && window._ref && window._set && window._onValue) {
     db = window._db; fbRef = window._ref; fbSet = window._set; fbOnValue = window._onValue;
