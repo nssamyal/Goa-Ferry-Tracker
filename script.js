@@ -1,5 +1,6 @@
 /* ═══════════════════════════════════════════════════════
    GOA FERRY TRACKER — script.js
+   v2 — Admin + 3-commuter voting system
 ═══════════════════════════════════════════════════════ */
 
 "use strict";
@@ -9,22 +10,27 @@ const ROUTES = {
   route2: { id:'route2', label:'Adpai ↔ Rassaim',   portA:'Adpai',   portB:'Rassaim', durA2B:10*60*1000, durB2A:10*60*1000 },
 };
 
-const ANTI_SPAM_GLOBAL = 3  * 60 * 1000;
-const ANTI_SPAM_DEVICE = 10 * 60 * 1000;
-const STALE_THRESHOLD  = 20 * 60 * 1000;
-const UNCERTAIN_AFTER  = 90 * 60 * 1000;
+const ADMIN_PASSWORD    = 'ferry@goa2024';  // Change this to your own password
+const VOTES_NEEDED      = 3;                // Commuter votes needed to confirm
+const ANTI_SPAM_DEVICE  = 5 * 60 * 1000;   // 5 min per device per route
+const STALE_THRESHOLD   = 20 * 60 * 1000;
+const UNCERTAIN_AFTER   = 90 * 60 * 1000;
 
 let currentRoute  = null;
 let pendingDepart = null;
 let liveData      = {};
 let timerInterval = null;
-let db, fbRef, fbSet, fbOnValue;
+let isAdmin       = false;
+let db, fbRef, fbSet, fbOnValue, fbGet;
 
-// Poll until Firebase is ready
+// ── Firebase init polling ─────────────────────────────
 function tryInit() {
-  if (window._db && window._ref && window._set && window._onValue) {
-    db = window._db; fbRef = window._ref; fbSet = window._set; fbOnValue = window._onValue;
+  if (window._db && window._ref && window._set && window._onValue && window._get) {
+    db = window._db; fbRef = window._ref; fbSet = window._set;
+    fbOnValue = window._onValue; fbGet = window._get;
     console.log('✅ Firebase ready');
+    isAdmin = localStorage.getItem('ferry_admin') === 'true';
+    updateAdminUI();
     listenRoute('route1');
     listenRoute('route2');
   } else {
@@ -33,6 +39,7 @@ function tryInit() {
 }
 tryInit();
 
+// ── Firebase listeners ────────────────────────────────
 function listenRoute(routeId) {
   fbOnValue(fbRef(db, `ferries/${routeId}`), snap => {
     const data = snap.val();
@@ -42,6 +49,10 @@ function listenRoute(routeId) {
   });
 }
 
+// ════════════════════════════════════════════════════════
+// PAGE NAVIGATION
+// ════════════════════════════════════════════════════════
+
 function openRoute(routeId) {
   currentRoute = routeId;
   const route  = ROUTES[routeId];
@@ -50,6 +61,8 @@ function openRoute(routeId) {
   document.getElementById('btn-port-b').textContent  = `Ferry left ${route.portB}`;
   showPage('page-route');
   renderRouteStatus(routeId, liveData[routeId] || null);
+  renderVoteSection(routeId, liveData[routeId] || null);
+  updateAdminUI();
   startTimer();
 }
 
@@ -65,19 +78,76 @@ function showPage(id) {
   window.scrollTo(0, 0);
 }
 
+// ════════════════════════════════════════════════════════
+// ADMIN
+// ════════════════════════════════════════════════════════
+
+function toggleAdmin() {
+  if (isAdmin) {
+    isAdmin = false;
+    localStorage.removeItem('ferry_admin');
+    updateAdminUI();
+    alert('Logged out of admin.');
+    return;
+  }
+  const pwd = prompt('Enter admin password:');
+  if (pwd === ADMIN_PASSWORD) {
+    isAdmin = true;
+    localStorage.setItem('ferry_admin', 'true');
+    updateAdminUI();
+    alert('✅ Admin access granted!');
+  } else if (pwd !== null) {
+    alert('❌ Wrong password.');
+  }
+}
+
+function updateAdminUI() {
+  const adminBtn = document.getElementById('admin-btn');
+  const adminBadge = document.getElementById('admin-badge');
+  const reporterLabel = document.getElementById('reporter-label');
+  if (!adminBtn) return;
+
+  if (isAdmin) {
+    adminBtn.textContent = '🔓 Admin: ON — Tap to logout';
+    adminBtn.classList.add('admin-active');
+    if (adminBadge) adminBadge.style.display = '';
+    if (reporterLabel) reporterLabel.textContent = 'Admin: Record departure';
+  } else {
+    adminBtn.textContent = '🔐 Admin login';
+    adminBtn.classList.remove('admin-active');
+    if (adminBadge) adminBadge.style.display = 'none';
+    if (reporterLabel) reporterLabel.textContent = 'Report a departure';
+  }
+}
+
+// ════════════════════════════════════════════════════════
+// HOME CARD SUMMARIES
+// ════════════════════════════════════════════════════════
+
 function updateHomeCard(routeId, data) {
   const footer = document.getElementById(`footer-${routeId}`);
   const dot    = document.getElementById(`dot-${routeId}`);
   if (!footer || !dot) return;
+
   if (!data || !data.timestamp) {
     footer.textContent = 'No recent data — tap to update';
     dot.className = 'route-status-dot unknown';
     return;
   }
+
+  // Pending votes — not yet confirmed
+  if (data.pending && !data.confirmed) {
+    const count = data.votes ? Object.keys(data.votes).length : 0;
+    footer.textContent = `🗳 ${count}/${VOTES_NEEDED} commuters reported — needs more votes`;
+    dot.className = 'route-status-dot stale';
+    return;
+  }
+
   const route    = ROUTES[routeId];
   const elapsed  = Date.now() - data.timestamp;
   const duration = data.direction === 'A2B' ? route.durA2B : route.durB2A;
   const toPort   = data.direction === 'A2B' ? route.portB : route.portA;
+
   if (elapsed > UNCERTAIN_AFTER) {
     footer.textContent = 'Status uncertain – waiting for update';
     dot.className = 'route-status-dot unknown';
@@ -91,29 +161,81 @@ function updateHomeCard(routeId, data) {
   }
 }
 
+// ════════════════════════════════════════════════════════
+// ROUTE STATUS RENDERING
+// ════════════════════════════════════════════════════════
+
 function renderRouteStatus(routeId, data) {
   const route = ROUTES[routeId];
-  if (!data || !data.timestamp || (Date.now() - data.timestamp > UNCERTAIN_AFTER)) { showUncertain(); return; }
+
+  // Show vote progress if pending
+  if (data && data.pending && !data.confirmed) {
+    renderVoteSection(routeId, data);
+    showUncertain();
+    return;
+  }
+
+  if (!data || !data.timestamp || (Date.now() - data.timestamp > UNCERTAIN_AFTER)) {
+    showUncertain();
+    renderVoteSection(routeId, data);
+    return;
+  }
+
   showLive();
+  renderVoteSection(routeId, data);
+
   const direction = data.direction;
   const fromPort  = direction === 'A2B' ? route.portA : route.portB;
   const toPort    = direction === 'A2B' ? route.portB : route.portA;
   const duration  = direction === 'A2B' ? route.durA2B : route.durB2A;
   const elapsed   = Date.now() - data.timestamp;
   const arrivalTs = data.timestamp + duration;
+
   document.getElementById('dir-from').textContent         = fromPort;
   document.getElementById('dir-to').textContent           = toPort;
   document.getElementById('prog-label-left').textContent  = fromPort;
   document.getElementById('prog-label-right').textContent = toPort;
   document.getElementById('info-departed').textContent    = formatTime(data.timestamp);
   document.getElementById('info-arrives').textContent     = formatTime(arrivalTs);
+
   const pct   = Math.round(Math.min(elapsed / duration, 1) * 100);
   const remMs = Math.max(duration - elapsed, 0);
+
   document.getElementById('info-progress').textContent    = `${pct}%`;
   document.getElementById('info-remaining').textContent   = remMs > 0 ? formatDuration(remMs) : 'Arrived';
   document.getElementById('progress-fill').style.width   = `${pct}%`;
   document.getElementById('ferry-icon').style.left       = `${pct}%`;
+
   renderReliability(data, elapsed);
+}
+
+function renderVoteSection(routeId, data) {
+  const voteBox = document.getElementById('vote-status-box');
+  if (!voteBox) return;
+
+  if (!data || !data.pending || data.confirmed) {
+    voteBox.style.display = 'none';
+    return;
+  }
+
+  const voteCount = data.votes ? Object.keys(data.votes).length : 0;
+  const direction = data.pendingDirection;
+  const route     = ROUTES[routeId];
+  const fromPort  = direction === 'A2B' ? route.portA : route.portB;
+  const toPort    = direction === 'A2B' ? route.portB : route.portA;
+
+  voteBox.style.display = '';
+  voteBox.innerHTML = `
+    <div class="vote-box">
+      <p class="vote-title">🗳 Commuters voting…</p>
+      <p class="vote-direction">${fromPort} → ${toPort}</p>
+      <div class="vote-bar-wrap">
+        ${[1,2,3].map(i => `<div class="vote-pip ${i <= voteCount ? 'filled' : ''}"></div>`).join('')}
+      </div>
+      <p class="vote-count">${voteCount} of ${VOTES_NEEDED} commuters confirmed</p>
+      <p class="vote-hint">Timer starts when ${VOTES_NEEDED} people report the same departure</p>
+    </div>
+  `;
 }
 
 function showUncertain() {
@@ -127,14 +249,18 @@ function showLive() {
 
 function renderReliability(data, elapsed) {
   const badge = document.getElementById('reliability-badge');
-  const count = data.updateCount || 1;
   let cls, label;
-  if (elapsed > STALE_THRESHOLD)   { cls='low';    label='⚠ Low reliability — data is old'; }
-  else if (count >= 2)              { cls='high';   label='✓ High reliability'; }
-  else                              { cls='medium'; label='~ Medium reliability — single report'; }
+  if (data.byAdmin)             { cls='high';   label='✓ Admin confirmed'; }
+  else if (elapsed > STALE_THRESHOLD) { cls='low'; label='⚠ Low reliability — data is old'; }
+  else if (data.updateCount >= 3)     { cls='high'; label='✓ High reliability — 3+ reports'; }
+  else                                { cls='medium'; label='~ Medium reliability'; }
   badge.className   = `reliability-badge ${cls}`;
   badge.textContent = label;
 }
+
+// ════════════════════════════════════════════════════════
+// LIVE TIMER
+// ════════════════════════════════════════════════════════
 
 function startTimer() {
   clearInterval(timerInterval);
@@ -147,24 +273,28 @@ function startTimer() {
   }, 1000);
 }
 
+// ════════════════════════════════════════════════════════
+// DEPARTURE REPORTING
+// ════════════════════════════════════════════════════════
+
 function reportDeparture(port) {
-  const key        = `last_report_${currentRoute}`;
-  const lastReport = parseInt(localStorage.getItem(key) || '0', 10);
-  const now        = Date.now();
-  if (now - lastReport < ANTI_SPAM_DEVICE) {
-    const waitMin = Math.ceil((ANTI_SPAM_DEVICE - (now - lastReport)) / 60000);
-    alert(`You can report again in about ${waitMin} minute${waitMin !== 1 ? 's' : ''}. Thank you!`);
-    return;
+  // Check device anti-spam (skip for admin)
+  if (!isAdmin) {
+    const key        = `last_vote_${currentRoute}_${port}`;
+    const lastVote   = parseInt(localStorage.getItem(key) || '0', 10);
+    const now        = Date.now();
+    if (now - lastVote < ANTI_SPAM_DEVICE) {
+      const waitMin = Math.ceil((ANTI_SPAM_DEVICE - (now - lastVote)) / 60000);
+      alert(`You already reported recently. Please wait ${waitMin} more minute${waitMin !== 1 ? 's' : ''}.`);
+      return;
+    }
   }
-  const existing = liveData[currentRoute];
-  if (existing && existing.timestamp && (now - existing.timestamp) < ANTI_SPAM_GLOBAL) {
-    const waitSec = Math.ceil((ANTI_SPAM_GLOBAL - (now - existing.timestamp)) / 1000);
-    alert(`A recent update was just recorded. Please wait ${waitSec}s.`);
-    return;
-  }
+
   pendingDepart = port;
-  const portName = port === 'A' ? ROUTES[currentRoute].portA : ROUTES[currentRoute].portB;
-  document.getElementById('popup-sub').textContent = `You're about to confirm the ferry just departed from ${portName}.`;
+  const route    = ROUTES[currentRoute];
+  const portName = port === 'A' ? route.portA : route.portB;
+  const modeText = isAdmin ? 'As admin, confirm ferry departure from' : 'Did the ferry just leave';
+  document.getElementById('popup-sub').textContent = `${modeText} ${portName}?`;
   document.getElementById('popup-overlay').style.display = 'flex';
 }
 
@@ -174,32 +304,100 @@ function closePopup() {
 }
 
 function confirmDeparture() {
-  // ⚠️ Save BEFORE closePopup() resets pendingDepart to null
   const savedDepart = pendingDepart;
   const savedRoute  = currentRoute;
-
   closePopup();
-
-  console.log('confirmDeparture → db:', !!db, 'route:', savedRoute, 'port:', savedDepart);
 
   if (!savedDepart || !savedRoute || !db) {
     alert('Something went wrong. Please try again.');
     return;
   }
 
-  const direction   = savedDepart === 'A' ? 'A2B' : 'B2A';
-  const now         = Date.now();
-  const existing    = liveData[savedRoute] || {};
-  const updateCount = existing.direction === direction ? (existing.updateCount || 1) + 1 : 1;
-  const payload     = { direction, timestamp: now, updateCount, reportedBy: getDeviceId() };
+  const direction = savedDepart === 'A' ? 'A2B' : 'B2A';
+  const now       = Date.now();
+  const deviceId  = getDeviceId();
 
-  fbSet(fbRef(db, `ferries/${savedRoute}`), payload)
+  if (isAdmin) {
+    // Admin → instant confirmed departure
+    const payload = {
+      direction,
+      timestamp:   now,
+      confirmed:   true,
+      byAdmin:     true,
+      updateCount: 1,
+      pending:     false,
+    };
+    writeConfirmed(savedRoute, payload);
+  } else {
+    // Commuter vote
+    castVote(savedRoute, direction, now, deviceId);
+  }
+}
+
+function castVote(routeId, direction, now, deviceId) {
+  const existing = liveData[routeId] || {};
+
+  // If there's a pending vote in same direction, add to it
+  // If different direction or no pending, start fresh
+  const samePending = existing.pending && existing.pendingDirection === direction;
+
+  const votesRef  = fbRef(db, `ferries/${routeId}/votes`);
+  const routeRef  = fbRef(db, `ferries/${routeId}`);
+
+  if (samePending) {
+    // Add this vote
+    const newVotes = { ...(existing.votes || {}), [deviceId]: now };
+    const voteCount = Object.keys(newVotes).length;
+
+    if (voteCount >= VOTES_NEEDED) {
+      // Enough votes — calculate average timestamp and confirm
+      const timestamps  = Object.values(newVotes);
+      const avgTs       = Math.round(timestamps.reduce((a, b) => a + b, 0) / timestamps.length);
+      const payload = {
+        direction,
+        timestamp:   avgTs,
+        confirmed:   true,
+        byAdmin:     false,
+        updateCount: voteCount,
+        pending:     false,
+        votes:       newVotes,
+      };
+      writeConfirmed(routeId, payload);
+    } else {
+      // Not enough yet — update vote count
+      fbSet(fbRef(db, `ferries/${routeId}`), {
+        ...existing,
+        votes: newVotes,
+        pending: true,
+        pendingDirection: direction,
+      }).then(() => {
+        saveDeviceVote(routeId, direction === 'A2B' ? 'A' : 'B');
+        console.log(`🗳 Vote recorded: ${voteCount}/${VOTES_NEEDED}`);
+      }).catch(err => alert('Could not save vote: ' + err.message));
+    }
+  } else {
+    // Fresh vote — start new pending
+    fbSet(routeRef, {
+      pending: true,
+      confirmed: false,
+      pendingDirection: direction,
+      votes: { [deviceId]: now },
+      timestamp: null,
+    }).then(() => {
+      saveDeviceVote(routeId, direction === 'A2B' ? 'A' : 'B');
+      console.log('🗳 First vote cast, waiting for more...');
+    }).catch(err => alert('Could not save vote: ' + err.message));
+  }
+}
+
+function writeConfirmed(routeId, payload) {
+  fbSet(fbRef(db, `ferries/${routeId}`), payload)
     .then(() => {
-      console.log('✅ Write success');
-      localStorage.setItem(`last_report_${savedRoute}`, String(now));
-      liveData[savedRoute] = payload;
-      currentRoute = savedRoute;
-      renderRouteStatus(savedRoute, payload);
+      console.log('✅ Departure confirmed!');
+      if (!isAdmin) saveDeviceVote(routeId, payload.direction === 'A2B' ? 'A' : 'B');
+      liveData[routeId] = payload;
+      currentRoute = routeId;
+      renderRouteStatus(routeId, payload);
       startTimer();
     })
     .catch(err => {
@@ -208,7 +406,17 @@ function confirmDeparture() {
     });
 }
 
+function saveDeviceVote(routeId, port) {
+  const key = `last_vote_${routeId}_${port}`;
+  localStorage.setItem(key, String(Date.now()));
+}
+
+// ════════════════════════════════════════════════════════
+// UTILITIES
+// ════════════════════════════════════════════════════════
+
 function formatTime(ts) {
+  if (!ts) return '—';
   return new Date(ts).toLocaleTimeString('en-IN', { hour:'2-digit', minute:'2-digit', hour12:true });
 }
 function formatDuration(ms) {
@@ -228,8 +436,10 @@ function getDeviceId() {
   return id;
 }
 
+// ── Expose globals ────────────────────────────────────
 window.openRoute        = openRoute;
 window.goHome           = goHome;
 window.reportDeparture  = reportDeparture;
 window.closePopup       = closePopup;
 window.confirmDeparture = confirmDeparture;
+window.toggleAdmin      = toggleAdmin;
