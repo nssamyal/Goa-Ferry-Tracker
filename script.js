@@ -1,9 +1,5 @@
 /* ═══════════════════════════════════════════════════════
-   GOA FERRY TRACKER — script.js v4
-   - Timer keeps running during pending votes
-   - Auto-cycling ferry (travel + boarding)
-   - Admin instant confirm
-   - 3-commuter vote system (avg timestamp)
+   GOA FERRY TRACKER — script.js 
 ═══════════════════════════════════════════════════════ */
 
 "use strict";
@@ -13,7 +9,7 @@ const ROUTES = {
   route2: { id:'route2', label:'Adpai ↔ Rassaim',   portA:'Adpai',   portB:'Rassaim', durA2B:10*60*1000, durB2A:10*60*1000 },
 };
 
-const ADMIN_PASSWORD   = 'ferry@goa2024'; // ← change this!
+const ADMIN_PASSWORD   = 'ferry@goa2026'; // Please do not misuse it!
 const VOTES_NEEDED     = 3;
 const BOARDING_TIME    = 5 * 60 * 1000;
 const ANTI_SPAM_DEVICE = 5 * 60 * 1000;
