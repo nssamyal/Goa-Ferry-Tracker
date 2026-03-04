@@ -67,14 +67,20 @@
 
     <main class="route-main">
 
+      <!-- Admin badge -->
+      <div id="admin-badge" class="admin-badge" style="display:none">🔓 Admin Mode Active</div>
+
+      <!-- Vote status box (shown when votes pending) -->
+      <div id="vote-status-box" style="display:none"></div>
+
       <!-- Status block -->
       <div class="status-card" id="status-card">
-        <div id="status-uncertain" class="uncertain-msg" style="display:none">
+        <div id="status-uncertain" class="uncertain-msg">
           <span class="uncertain-icon">🌊</span>
           <p>Status uncertain – waiting for commuter update.</p>
         </div>
 
-        <div id="status-live">
+        <div id="status-live" style="display:none">
           <div class="direction-row">
             <span class="dir-port" id="dir-from"></span>
             <span class="dir-arrow">→</span>
@@ -115,10 +121,15 @@
 
       <!-- Reporter buttons -->
       <div class="reporter-section">
-        <p class="reporter-label">Report a departure</p>
+        <p class="reporter-label" id="reporter-label">Report a departure</p>
         <button class="depart-btn" id="btn-port-a" onclick="reportDeparture('A')"></button>
         <button class="depart-btn" id="btn-port-b" onclick="reportDeparture('B')"></button>
-        <p class="reporter-hint">Updates are shared with all commuters in real time.</p>
+        <p class="reporter-hint" id="reporter-hint">3 commuter reports needed to confirm · updates shared in real time</p>
+      </div>
+
+      <!-- Admin login button -->
+      <div class="admin-section">
+        <button class="admin-btn" id="admin-btn" onclick="toggleAdmin()">🔐 Admin login</button>
       </div>
 
     </main>
@@ -136,13 +147,13 @@
     </div>
   </div>
 
-  <!-- Load script.js FIRST (non-module, defines globals) -->
+  <!-- Load script.js FIRST -->
   <script src="script.js"></script>
 
-  <!-- Firebase SDK loads AFTER — sets window._db etc, which tryInit() picks up -->
+  <!-- Firebase SDK -->
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
-    import { getDatabase, ref, set, onValue, serverTimestamp }
+    import { getDatabase, ref, set, onValue, get, serverTimestamp }
       from "https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
 
     const firebaseConfig = {
@@ -162,9 +173,10 @@
     window._ref      = ref;
     window._set      = set;
     window._onValue  = onValue;
+    window._get      = get;
     window._serverTs = serverTimestamp;
 
-    console.log('🔥 Firebase module loaded, window._db set');
+    console.log('🔥 Firebase module loaded');
   </script>
 
 </body>
