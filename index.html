@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Goa Ferry Tracker</title>
+  <link rel="stylesheet" href="style.css" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet" />
+</head>
+<body>
+
+  <!-- ===== HOME PAGE ===== -->
+  <div id="page-home" class="page active">
+    <header class="home-header">
+      <div class="header-icon">⛵</div>
+      <h1 class="home-title">Goa Ferry<br/><em>Tracker</em></h1>
+      <p class="home-subtitle">Live commuter-updated ferry status</p>
+    </header>
+
+    <main class="home-main">
+      <p class="section-label">Choose your route</p>
+
+      <div class="route-card" id="card-route1" onclick="openRoute('route1')">
+        <div class="route-card-inner">
+          <div class="route-ports">
+            <span class="port-name">Durbhat</span>
+            <span class="route-arrow">⟷</span>
+            <span class="port-name">Rassaim</span>
+          </div>
+          <div class="route-meta">
+            <span class="route-duration">20 min crossing</span>
+            <span class="route-status-dot" id="dot-route1"></span>
+          </div>
+        </div>
+        <div class="route-card-footer" id="footer-route1">Loading status…</div>
+      </div>
+
+      <div class="route-card" id="card-route2" onclick="openRoute('route2')">
+        <div class="route-card-inner">
+          <div class="route-ports">
+            <span class="port-name">Adpai</span>
+            <span class="route-arrow">⟷</span>
+            <span class="port-name">Rassaim</span>
+          </div>
+          <div class="route-meta">
+            <span class="route-duration">10 min crossing</span>
+            <span class="route-status-dot" id="dot-route2"></span>
+          </div>
+        </div>
+        <div class="route-card-footer" id="footer-route2">Loading status…</div>
+      </div>
+    </main>
+
+    <footer class="home-footer">
+      <p>Updates are crowdsourced from commuters.<br/>Tap a route to see details or report a departure.</p>
+    </footer>
+  </div>
+
+  <!-- ===== ROUTE PAGE ===== -->
+  <div id="page-route" class="page">
+    <header class="route-header">
+      <button class="back-btn" onclick="goHome()">← Back</button>
+      <h2 class="route-title" id="route-title"></h2>
+    </header>
+
+    <main class="route-main">
+
+      <!-- Status block -->
+      <div class="status-card" id="status-card">
+        <div id="status-uncertain" class="uncertain-msg" style="display:none">
+          <span class="uncertain-icon">🌊</span>
+          <p>Status uncertain – waiting for commuter update.</p>
+        </div>
+
+        <div id="status-live">
+          <div class="direction-row">
+            <span class="dir-port" id="dir-from"></span>
+            <span class="dir-arrow">→</span>
+            <span class="dir-port" id="dir-to"></span>
+          </div>
+
+          <div class="progress-wrap">
+            <span class="progress-port-label" id="prog-label-left"></span>
+            <div class="progress-track">
+              <div class="progress-fill" id="progress-fill"></div>
+              <div class="ferry-icon" id="ferry-icon">⛴</div>
+            </div>
+            <span class="progress-port-label" id="prog-label-right"></span>
+          </div>
+
+          <div class="info-grid">
+            <div class="info-cell">
+              <span class="info-label">Departed</span>
+              <span class="info-val" id="info-departed">—</span>
+            </div>
+            <div class="info-cell">
+              <span class="info-label">Arrives at</span>
+              <span class="info-val" id="info-arrives">—</span>
+            </div>
+            <div class="info-cell">
+              <span class="info-label">Time left</span>
+              <span class="info-val" id="info-remaining">—</span>
+            </div>
+            <div class="info-cell">
+              <span class="info-label">Progress</span>
+              <span class="info-val" id="info-progress">—</span>
+            </div>
+          </div>
+
+          <div class="reliability-badge" id="reliability-badge"></div>
+        </div>
+      </div>
+
+      <!-- Reporter buttons -->
+      <div class="reporter-section">
+        <p class="reporter-label">Report a departure</p>
+        <button class="depart-btn" id="btn-port-a" onclick="reportDeparture('A')"></button>
+        <button class="depart-btn" id="btn-port-b" onclick="reportDeparture('B')"></button>
+        <p class="reporter-hint">Updates are shared with all commuters in real time.</p>
+      </div>
+
+    </main>
+  </div>
+
+  <!-- ===== CONFIRMATION POPUP ===== -->
+  <div id="popup-overlay" class="popup-overlay" style="display:none">
+    <div class="popup">
+      <p class="popup-question">Did the ferry just leave this port?</p>
+      <p class="popup-sub" id="popup-sub"></p>
+      <div class="popup-actions">
+        <button class="popup-cancel" onclick="closePopup()">Cancel</button>
+        <button class="popup-confirm" onclick="confirmDeparture()">Yes, confirm</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Load script.js FIRST (non-module, defines globals) -->
+  <script src="script.js"></script>
+
+  <!-- Firebase SDK loads AFTER — sets window._db etc, which tryInit() picks up -->
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+    import { getDatabase, ref, set, onValue, serverTimestamp }
+      from "https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyCRkMp7Er_QS-9lKcNXttZ9qJyWPiRrOl0",
+      authDomain: "goa-ferry-tracker.firebaseapp.com",
+      databaseURL: "https://goa-ferry-tracker-default-rtdb.asia-southeast1.firebasedatabase.app",
+      projectId: "goa-ferry-tracker",
+      storageBucket: "goa-ferry-tracker.firebasestorage.app",
+      messagingSenderId: "258779280198",
+      appId: "1:258779280198:web:896b5feba06f1cb1102b47"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const db  = getDatabase(app);
+
+    window._db       = db;
+    window._ref      = ref;
+    window._set      = set;
+    window._onValue  = onValue;
+    window._serverTs = serverTimestamp;
+
+    console.log('🔥 Firebase module loaded, window._db set');
+  </script>
+
+</body>
+</html>
