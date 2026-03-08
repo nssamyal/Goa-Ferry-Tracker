@@ -128,27 +128,24 @@ function showPage(id) {
   document.getElementById(id).classList.add('active');
   window.scrollTo(0, 0);
 }
-
-// ════════════════════════════════════════════════════════
 // ADMIN
-// ════════════════════════════════════════════════════════
 
 function toggleAdmin() {
   if (isAdmin) {
     isAdmin = false;
     localStorage.removeItem('ferry_admin');
     updateAdminUI();
-    alert('Logged out of admin.');
+    showToast('Logged out of admin.');
     return;
   }
-  const pwd = prompt('Enter admin password:');
-  if (pwd === ADMIN_PASSWORD) {
-    isAdmin = true;
-    localStorage.setItem('ferry_admin', 'true');
-    updateAdminUI();
-    alert('✅ Admin access granted!');
-  } else if (pwd !== null) {
-    alert('❌ Wrong password.');
+  const popup = document.getElementById('admin-popup');
+  const input = document.getElementById('admin-password-input');
+  if (popup && input) {
+    input.value = '';
+    popup.style.display = 'flex';
+    popup.style.zIndex  = '500';
+    // Don't auto-focus on mobile — it causes issues
+    // User will tap the input themselves
   }
 }
 
@@ -173,9 +170,7 @@ function updateAdminUI() {
   }
 }
 
-// ════════════════════════════════════════════════════════
 // HOME CARD SUMMARIES
-// ════════════════════════════════════════════════════════
 
 function updateHomeCard(routeId, data) {
   const footer = document.getElementById(`footer-${routeId}`);
@@ -214,10 +209,9 @@ function updateHomeCard(routeId, data) {
   }
 }
 
-// ════════════════════════════════════════════════════════
 // ROUTE STATUS RENDERING
 // Timer keeps running even during pending votes
-// ════════════════════════════════════════════════════════
+
 
 function renderRouteStatus(routeId, data) {
   const route = ROUTES[routeId];
