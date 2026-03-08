@@ -636,5 +636,10 @@ body {
   border: 1.5px solid #fcd34d;
 }
 #admin-popup {
-  z-index: 200 !important;
+  z-index: 500 !important;
+  position: fixed !important;
+}
+#admin-popup .popup {
+  position: relative;
+  z-index: 501;
 }
