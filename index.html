@@ -61,9 +61,9 @@
     </main>
 
     <footer class="home-footer">
-  <p>Updates are crowdsourced from commuters.<br/>Tap a route to see details or report a departure.</p>
-  <p class="copyright">© 2026Goa Ferry Tracker · Built by MxGremLin<br/>All rights reserved. Unauthorised copying prohibited.</p>
-</footer>
+      <p>Updates are crowdsourced from commuters.<br/>Tap a route to see details or report a departure.</p>
+      <p class="copyright">© 2026 Goa Ferry Tracker · Built by MxGremLin<br/>All rights reserved. Unauthorised copying prohibited.</p>
+    </footer>
   </div>
 
   <!-- ===== ROUTE PAGE ===== -->
@@ -163,8 +163,26 @@
     </div>
   </div>
 
+  <!-- ===== ADMIN PASSWORD POPUP ===== -->
+  <div id="admin-popup" style="display:none;position:fixed;inset:0;background:rgba(10,20,50,0.45);z-index:9999;align-items:flex-end;justify-content:center;">
+    <div class="popup">
+      <p class="popup-question">Admin Login</p>
+      <p class="popup-sub">Enter your admin password to continue</p>
+      <input
+        type="password"
+        id="admin-password-input"
+        placeholder="Password"
+        style="width:100%;padding:14px;border:1.5px solid #e4e9f0;border-radius:12px;font-size:1rem;margin-bottom:20px;font-family:inherit;outline:none;box-sizing:border-box;"
+      />
+      <div class="popup-actions">
+        <button class="popup-cancel" onclick="closeAdminPopup()">Cancel</button>
+        <button class="popup-confirm" onclick="submitAdminPassword()">Login</button>
+      </div>
+    </div>
+  </div>
+
   <!-- script.js loads first -->
-  <script src="script.js"></script>
+  <script src="script.js?v=6"></script>
 
   <!-- Firebase SDK -->
   <script type="module">
